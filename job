@@ -1,0 +1,8 @@
+#! /usr/bin/bash
+
+for named in 32 64 128 
+do
+	sed "s/nbs=aa/nbs=$named/g" SO.py>SO_T.py
+        mpiexec -np 4 python SO_T.py
+done
+rm -rf SO_T.py
