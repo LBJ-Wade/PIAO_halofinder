@@ -29,7 +29,7 @@ phot=np.array(["500","VIR"])  #Add here all the interested overdensities
 skip1 =True  #False                          #skip first meshing step
 skip2 =False #True                          #skip Second meshing step
 
-#******* Snapshot input *************#
+#******* Snapshot input parameter*************#
 snapth="/home/wgcui/data/MUPPI/" #snapshot file path
 snn=64                               #snapshot output number
 fnum=4                              #snapshot file number
