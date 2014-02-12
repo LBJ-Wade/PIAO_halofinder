@@ -3,7 +3,6 @@
 # Released under the scipy license
 import numpy as np
 import scipy.sparse
-from struct import pack
 
 cimport numpy as np
 cimport libc.stdlib as stdlib
@@ -38,16 +37,6 @@ __all__ = ['cKDTree']
 # The following utility functions help properly add int tuples to sets and
 # ints to lists.  The results of the if is known at compile time, so the
 # test is optimized away.
-
-# cdef inline np.float64_t gadget2(object r, np.intp_t n):
-#     cdef np.intp_t i
-#     for i in range(n):
-#         r[i]=r[i]/r[-1]
-#         if r[i]<0.5:
-#             r[i]= (2.546479089470 + 15.278874536822 * (r[i] - 1) * r[i] * r[i])/r[-1]**3
-#         else:
-#             r[i]= (5.092958178941 * (1.0 - r[i]) * (1.0 - r[i]) * (1.0 - r[i]))/r[-1]**3
-#     return 0
 
 cdef inline int set_add_pair(set results,
                              np.intp_t i,
@@ -1175,7 +1164,6 @@ cdef class cKDTree:
 
 
     @cython.boundscheck(False)
-    @cython.wraparound(False)
     def query(cKDTree self, object x, np.intp_t k=1, np.float64_t eps=0,
               np.float64_t p=2, np.float64_t distance_upper_bound=infinity):
         """query(self, x, k=1, eps=0, p=2, distance_upper_bound=np.inf)
@@ -1565,7 +1553,7 @@ cdef class cKDTree:
 
         # Make sure trees are compatible
         if self.m != other.m:
-            raise ValueError("Trees passed to query_ball_trees have different dimensionality")
+            raise ValueError("Trees passed to query_ball_tree have different dimensionality")
 
         # Track node-to-node min/max distances
         tracker = RectRectDistanceTracker(
@@ -1875,7 +1863,6 @@ cdef class cKDTree:
         return 0
 
     @cython.boundscheck(False)
-    @cython.wraparound(False)
     def count_neighbors(cKDTree self, cKDTree other, object r, np.float64_t p=2.):
         """count_neighbors(self, other, r, p)
 
@@ -1911,7 +1898,7 @@ cdef class cKDTree:
 
         # Make sure trees are compatible
         if self.m != other.m:
-            raise ValueError("Trees passed to query_ball_trees have different dimensionality")
+            raise ValueError("Trees passed to count_neighbors have different dimensionality")
 
         # Make a copy of r array to ensure it's contiguous and to modify it
         # below
@@ -1978,7 +1965,7 @@ cdef class cKDTree:
                     if node1 == node2:
                         min_j = i+1
                     else:
-                        min_j = lnode2.end_idx
+                        min_j = lnode2.start_idx
                         
                     for j in range(min_j, lnode2.end_idx):
                         d = _distance_p(
@@ -1986,11 +1973,13 @@ cdef class cKDTree:
                             other.raw_data + other.raw_indices[j] * self.m,
                             tracker.p, self.m, tracker.upper_bound)
                         if d <= tracker.upper_bound:
+                            if tracker.p != 1 and tracker.p != infinity:
+                                d = d**(1. / tracker.p)
                             results.add(self.raw_indices[i],
-                                        self.raw_indices[j], d)
+                                        other.raw_indices[j], d)
                             if node1 == node2:
                                 results.add(self.raw_indices[j],
-                                            self.raw_indices[i], d)
+                                            other.raw_indices[i], d)
 
             else:  # 1 is a leaf node, 2 is inner node
                 tracker.push_less_of(2, node2)
@@ -2074,7 +2063,7 @@ cdef class cKDTree:
 
         # Make sure trees are compatible
         if self.m != other.m:
-            raise ValueError("Trees passed to query_ball_trees have different dimensionality")
+            raise ValueError("Trees passed to sparse_distance_matrix have different dimensionality")
 
         # Calculate mins and maxes to outer box
         tracker = RectRectDistanceTracker(
@@ -2094,7 +2083,6 @@ cdef class cKDTree:
     #---------
 
     @cython.boundscheck(False)
-    @cython.wraparound(False)
     def qdens(cKDTree self, object x, object mass, np.intp_t k=1,
               np.float64_t phoc=-1., np.float64_t eps=0, np.float64_t p=2,
               np.float64_t distance_upper_bound=infinity):
@@ -2244,151 +2232,3 @@ cdef class cKDTree:
                 return dens[0]
             else:
                 return dens
-        
-# @cython.boundscheck(False)
-# @cython.wraparound(False)
-# def grouping(char *outfiles, np.float64_t Numcut, np.float64_t boxsize,
-#              np.float64_t binsize, np.float64_t bufsize, np.float64_t scfa,
-#              np.float64_t SOpho, np.intp_t ii,
-#              object dens, object meshids, object meshpos, object meshmas):
-    
-#     cdef np.float64_t bins, bins2, lmbs, rrag, gradius
-#     cdef np.intp_t lbn, didp, lmgx, lmgy, lmgz, hmgx, hmgy, hmgz, i, jj
-#     cdef np.ndarray[np.intp_t, ndim=1] nxyz, xyz, H2, tsgrid, lmgidp
-#     cdef np.ndarray[np.float32_t, ndim=1] ppos
-#     cdef np.ndarray[np.intp_t, ndim=2] tmgrid
-#     cdef np.ndarray[np.float64_t, ndim=1] xyzmin, xyzmmin, xyzmax
-    
-#     cdef np.int64_t SOTotNgroups, SOTotNids
-#     cdef np.ndarray[np.int32_t, ndim=1] SOGroupLen
-#     cdef np.ndarray[np.uint32_t, ndim=1] SOGroupOffset, SOPids, SOGroupIDs
-#     cdef np.ndarray[np.float32_t, ndim=1] SOGroupMass, SOR500
-#     cdef np.ndarray[np.float32_t, ndim=2] SOpotPos, SOmcPos
-
-#     bins=np.ceil(boxsize/binsize)
-#     bins2=bins*bins
-#     SOTotNgroups,SOTotNids=0,0
-
-#     SOGroupLen    =np.empty((0),dtype=np.int32)
-#     SOGroupOffset =np.empty((1),dtype=np.uint32)
-#     SOGroupMass   =np.empty((0),dtype=np.float32)
-#     SOR500        =np.empty((0),dtype=np.float32)
-#     SOpotPos      =np.empty((0,3),dtype=np.float32)
-#     SOmcPos       =np.empty((0,3),dtype=np.float32)
-#     SOPids        =np.empty((0),dtype=np.uint32)
-#     SOGroupIDs    =np.empty((0),dtype=np.uint32)
-
-#     dens          =np.asarray(dens).astype(np.float32)
-#     meshids       =np.asarray(meshids).astype(np.uint32)
-#     meshpos       =np.asarray(meshpos).astype(np.float32)
-#     meshmas       =np.asarray(meshmas).astype(np.float32)
-#     if len(meshmas.shape) ==0:
-#         sm = True
-#     else:
-#         sm = False
-
-#     nxyz=np.intp(np.floor(np.array([ii/bins2,np.mod(ii,bins2)/bins,
-#                                      np.mod(np.mod(ii,bins2),bins)])))
-#     xyzmin,xyzmmin=nxyz*binsize,nxyz*binsize-bufsize
-#     xyzmax=(nxyz+1)*binsize
-
-#     lmbs=100.0
-#     lbn=np.intp(np.ceil((binsize+2*bufsize)/lmbs))
-#     xyz=np.intp((meshpos[:,0]-xyzmmin[0])/lmbs)*lbn*lbn+np.intp((meshpos[:,1]
-#         -xyzmmin[1])/lmbs)*lbn+np.intp((meshpos[:,2]-xyzmmin[2])/lmbs)
-#     H2    = np.zeros((lbn**3),dtype=np.intp)
-#     hcum2 = np.zeros((lbn**3),dtype=np.intp)
-#     for i in range(np.size(xyz)):
-#         H2[xyz[i]]+=1
-#     #print meshpos,xyz,H2
-#     xyz   =np.argsort(xyz)
-#     hcum2 =np.cumsum(H2)
-#     #print xyz,hcum2
-
-#     while True:
-#         didp=np.argmax(dens)
-#         ppos=meshpos[didp,:]
-#         if dens[didp]<SOpho:
-#             break
-
-#         rrag=lmbs
-#         while True:
-#             lmgx=np.intp(np.floor((ppos[0]-xyzmmin[0]-rrag)/lmbs))
-#             lmgy=np.intp(np.floor((ppos[1]-xyzmmin[1]-rrag)/lmbs))
-#             lmgz=np.intp(np.floor((ppos[2]-xyzmmin[2]-rrag)/lmbs))
-#             if lmgx<0:
-#                 lmgx=0
-#             if lmgy<0:
-#                 lmgy=0
-#             if lmgz<0:
-#                 lmgz=0
-#             hmgx=np.intp(np.ceil((ppos[0]-xyzmmin[0]+rrag)/lmbs))
-#             hmgy=np.intp(np.ceil((ppos[1]-xyzmmin[1]+rrag)/lmbs))
-#             hmgz=np.intp(np.ceil((ppos[2]-xyzmmin[2]+rrag)/lmbs))
-#             if hmgx>lbn:
-#                 hmgx=lbn
-#             if hmgy<lbn:
-#                 hmgy=lbn
-#             if hmgz<lbn:
-#                 hmgz=lbn
-#             tmgrid=np.transpose(np.reshape(np.mgrid[lmgx:hmgx,lmgy:hmgy,lmgz:hmgz],
-#                                            (3,(hmgx-lmgx)*(hmgy-lmgy)*(hmgz-lmgz))))
-#             tsgrid=np.asarray(tmgrid[:,0]*lbn*lbn+tmgrid[:,1]*lbn+tmgrid[:,2])
-#             lmgidp=np.zeros((0),dtype=np.intp)
-#             #print ppos
-#             for jj in tsgrid:
-#                 if H2[jj]>0:
-#                     lmgidp=np.append(lmgidp,xyz[hcum2[jj]-H2[jj]:hcum2[jj]],axis=0)
-#             Radius=np.sqrt(np.sum((meshpos[lmgidp,:]-ppos[:])**2,axis=1))
-#             indrs =np.argsort(Radius)
-#             Radius=Radius[indrs]
-#             if sm:
-#                 CRmas =np.arange(np.size(Radius),dtype=np.float32)*meshmas
-#             else:
-#                 CRmas =meshmas[lmgidp[indrs]]
-#             CRad  =(Radius[1:]+Radius[:-1])/2.        
-#             Rho   =CRmas[:-1]/(4.*np.pi*(CRad*scfa)**3/3.)
-#             rindlr= np.where(Rho<=SOpho)[0]
-#             #print tmgrid,tsgrid,lmgidp
-#             rslpart=lmgidp[indrs[0:rindlr[0]+1]]
-#             gradius=CRad[rindlr[0]]
-#             if gradius>0.8*rrag:
-#                 rrag*=3.
-#             else:
-#                 break
-
-#         if rindlr[0]>=Numcut:
-#             if np.intp(np.floor(ppos[0]/binsize)) == nxyz[0]:
-#                 if np.intp(np.floor(ppos[1]/binsize)) == nxyz[1]:
-#                     if np.intp(np.floor(ppos[2]/binsize)) == nxyz[2]:
-#                         SOpotPos=np.append(SOpotPos,np.reshape(ppos,(1,3)),axis=0)
-#                         SOGroupMass=np.append(SOGroupMass,CRmas[rindlr[0]])
-#                         SOR500=np.append(SOR500,np.float32(gradius))
-#                         SOGroupLen=np.append(SOGroupLen,np.int32(rindlr[0]+1))
-#                         SOGroupOffset=np.append(SOGroupOffset,
-#                             np.uint32(rindlr[0]+1+SOGroupOffset[SOTotNgroups]))
-#                         SOTotNids+=rindlr[0]+1
-#                         SOPids=np.append(SOPids,meshids[didp])
-#                         SOmcPos=np.append(SOmcPos,np.reshape(np.sum(np.multiply(
-#                             np.transpose(meshpos[rslpart,:]),meshmas[rslpart]),
-#                             axis=1)/SOGroupMass[SOTotNgroups],(1,3)),axis=0)
-#                         SOGroupIDs=np.append(SOGroupIDs,meshids[rslpart])
-#                         SOTotNgroups+=1
-
-#         dens[rslpart]=-1*np.abs(dens[rslpart])
-
-#     ff=open(outfiles+"."+str(ii),'wb')
-#     d1=pack('q q q',SOTotNgroups,SOTotNids,bins2*bins)
-#     ff.write(d1)
-#     ff.write(np.int32(SOGroupLen))
-#     ff.write(np.uint32(SOGroupOffset[:SOTotNgroups]))
-#     ff.write(np.float32(SOGroupMass))
-#     ff.write(np.float32(SOR500))
-#     ff.write(np.float32(SOpotPos))
-#     ff.write(np.float32(SOmcPos))
-#     ff.write(SOPids)
-#     ff.write(SOGroupIDs)
-#     ff.close()
-#     #print "total time",time()-st
-
-#     return SOTotNgroups
