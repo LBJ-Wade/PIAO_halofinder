@@ -125,8 +125,8 @@ if (not skip2):  #SKIP step 2
                 "1":ii,"2":rank}
 
             st=time()
-            ret_mesh=readdata_smp(ii,tmpph,boxsize,binsize,bufsize,fnum,longid)
-            meshids,meshpos,meshpot,meshmas,meshnum=ret_mesh
+            meshids,meshpos,meshpot,meshmas,meshnum,meshnpt= \
+                readdata_smp(ii,tmpph,boxsize,binsize,bufsize,fnum,longid)
             #meshids,meshpos,meshpot,meshmas,tmpart,meshnum=readdata_acc(
             #    ii,tmpph,boxsize,binsize,bufsize,fnum,longid)
             Mtree=cKDTree(meshpos,leafsize=nbs/2)
