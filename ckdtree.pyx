@@ -203,7 +203,8 @@ cdef class coo_entries:
         np.intp_t n, n_max
         np.ndarray i, j
         np.ndarray v
-        np.intp_t  *i_data, *j_data
+        np.intp_t  *i_data
+        np.intp_t  *j_data
         np.float64_t *v_data
     
     def __init__(self):
@@ -1408,7 +1409,8 @@ cdef class cKDTree:
                                                     list results,
                                                     innernode* node1,
                                                     innernode* node2) except -1:
-        cdef leafnode *lnode1, *lnode2
+        cdef leafnode *lnode1
+        cdef leafnode *lnode2
         cdef list results_i
         cdef np.intp_t i, j
         
@@ -1441,7 +1443,8 @@ cdef class cKDTree:
                                                  innernode* node1,
                                                  innernode* node2,
                                                  RectRectDistanceTracker tracker) except -1:
-        cdef leafnode *lnode1, *lnode2
+        cdef leafnode *lnode1
+        cdef leafnode *lnode2
         cdef list results_i
         cdef np.float64_t d
         cdef np.intp_t i, j
@@ -1575,7 +1578,8 @@ cdef class cKDTree:
                                                 set results,
                                                 innernode* node1,
                                                 innernode* node2) except -1:
-        cdef leafnode *lnode1, *lnode2
+        cdef leafnode *lnode1
+        cdef leafnode *lnode2
         cdef list results_i
         cdef np.intp_t i, j, min_j
         
@@ -1621,7 +1625,8 @@ cdef class cKDTree:
                                              innernode* node1,
                                              innernode* node2,
                                              RectRectDistanceTracker tracker) except -1:
-        cdef leafnode *lnode1, *lnode2
+        cdef leafnode *lnode1
+        cdef leafnode *lnode2
         cdef list results_i
         cdef np.float64_t d
         cdef np.intp_t i, j, min_j
@@ -1762,7 +1767,8 @@ cdef class cKDTree:
                                         innernode* node1,
                                         innernode* node2,
                                         RectRectDistanceTracker tracker) except -1:
-        cdef leafnode *lnode1, *lnode2
+        cdef leafnode *lnode1
+        cdef leafnode *lnode2
         cdef np.float64_t d
         cdef np.intp_t *old_idx
         cdef np.intp_t old_n_queries, l, i, j
@@ -1946,7 +1952,8 @@ cdef class cKDTree:
                                                coo_entries results,
                                                innernode* node1, innernode* node2,
                                                RectRectDistanceTracker tracker) except -1:
-        cdef leafnode *lnode1, *lnode2
+        cdef leafnode *lnode1
+        cdef leafnode *lnode2
         cdef list results_i
         cdef np.float64_t d
         cdef np.intp_t i, j, min_j
@@ -2232,3 +2239,140 @@ cdef class cKDTree:
                 return dens[0]
             else:
                 return dens
+
+    # ----------------
+    # query_neighbors
+    # copied from query_ball_point
+    # ----------------
+    cdef int __query_neighbors_traverse_no_checking(cKDTree self,
+                                                     list results,
+                                                     innernode* node) except -1:
+        cdef leafnode* lnode
+        cdef np.intp_t i
+
+        if node.split_dim == -1:  # leaf node
+            lnode = <leafnode*> node
+            results[0]+=lnode.end_idx-lnode.start_idx
+            #for i in range(lnode.start_idx, lnode.end_idx):
+            #    list_append(results, self.raw_indices[i])
+        else:
+            self.__query_neighbors_traverse_no_checking(results, node.less)
+            self.__query_neighbors_traverse_no_checking(results, node.greater)
+
+        return 0
+
+
+    @cython.cdivision(True)
+    cdef int __query_neighbors_traverse_checking(cKDTree self,
+                                                  list results,
+                                                  innernode* node,
+                                                  PointRectDistanceTracker tracker) except -1:
+        cdef leafnode* lnode
+        cdef np.float64_t d
+        cdef np.intp_t i
+
+        if tracker.min_distance > tracker.upper_bound * tracker.epsfac:
+            return 0
+        elif tracker.max_distance < tracker.upper_bound / tracker.epsfac:
+            self.__query_neighbors_traverse_no_checking(results, node)
+
+        elif node.split_dim == -1:  # leaf node
+            lnode = <leafnode*>node
+            # brute-force
+            for i in range(lnode.start_idx, lnode.end_idx):
+                d = _distance_p(
+                    self.raw_data + self.raw_indices[i] * self.m,
+                    tracker.pt, tracker.p, self.m, tracker.upper_bound)
+                if d <= tracker.upper_bound:
+                    #list_append(results, self.raw_indices[i])
+                    results[0]+=1
+        else:
+            tracker.push_less_of(node)
+            self.__query_neighbors_traverse_checking(
+                results, node.less, tracker)
+            tracker.pop()
+            
+            tracker.push_greater_of(node)
+            self.__query_neighbors_traverse_checking(
+                results, node.greater, tracker)
+            tracker.pop()
+            
+        return 0
+
+
+    cdef long __query_neighbors(cKDTree self,
+                                 np.float64_t* x,
+                                 np.float64_t r,
+                                 np.float64_t p,
+                                 np.float64_t eps):
+
+        tracker = PointRectDistanceTracker()
+        tracker.init(x, Rectangle(self.mins, self.maxes),
+                     p, eps, r)
+
+        results = [0]
+        self.__query_neighbors_traverse_checking(
+            results, self.tree, tracker)
+
+        return results[0]
+
+
+    def query_neighbors(cKDTree self, object x, np.float64_t r,
+                         np.float64_t p=2., np.float64_t eps=0):
+        """query_ball_point(self, x, r, p, eps)
+        
+        Return the number of neighbors within distance r of point(s) x.
+
+        Parameters
+        ----------
+        x : array_like, shape tuple + (self.m,)
+            The point or points to search for neighbors of.
+        r : positive float
+            The radius of points to return.
+        p : float, optional
+            Which Minkowski p-norm to use.  Should be in the range [1, inf].
+        eps : nonnegative float, optional
+            Approximate search. Branches of the tree are not explored if their
+            nearest points are further than ``r / (1 + eps)``, and branches are
+            added in bulk if their furthest points are nearer than
+            ``r * (1 + eps)``.
+
+        Returns
+        -------
+        results : list or array of lists
+            If `x` is a single point, returns a list of the indices of the
+            neighbors of `x`. If `x` is an array of points, returns an object
+            array of shape tuple containing lists of neighbors.
+
+        Notes
+        -----
+        If you have many points whose neighbors you want to find, you may save
+        substantial amounts of time by putting them in a cKDTree and using
+        query_ball_tree.
+
+        Examples
+        --------
+        >>> from scipy import spatial
+        >>> x, y = np.mgrid[0:4, 0:4]
+        >>> points = zip(x.ravel(), y.ravel())
+        >>> tree = spatial.cKDTree(points)
+        >>> tree.query_ball_point([2, 0], 1)
+        [4, 8, 9, 12]
+
+        """
+        cdef np.ndarray[np.float64_t, ndim=1, mode="c"] xx
+        
+        x = np.asarray(x).astype(np.float64)
+        if x.shape[-1] != self.m:
+            raise ValueError("Searching for a %d-dimensional point in a " \
+                             "%d-dimensional KDTree" % (int(x.shape[-1]), int(self.m)))
+        if len(x.shape) == 1:
+            xx = np.ascontiguousarray(x, dtype=np.float64)
+            return self.__query_neighbors(&xx[0], r, p, eps)
+        else:
+            retshape = x.shape[:-1]
+            result = np.empty(retshape, dtype=np.intp)
+            for c in np.ndindex(retshape):
+                xx = np.ascontiguousarray(x[c], dtype=np.float64)
+                result[c] = self.__query_neighbors(&xx[0], r, p, eps)
+            return result

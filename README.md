@@ -4,7 +4,7 @@ PIAO
 PIAO (漂) is efficient memory-controlled python code using the standard SO algorithm to identify halos.
 
 
-Reqiures: 
+Reqiures (not fully checked!): 
     Python >= 2.6.x, not know for 3.x.x
     Numpy  >= 1.5.x
     Cython >= 0.18

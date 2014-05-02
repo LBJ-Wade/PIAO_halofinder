@@ -108,6 +108,8 @@ def grouping(outfiles,Numcut,boxsize,binsize,bufsize,scfa,SOpho,ii,meshids,meshp
                                 /SOGroupMass[SOTotNgroups],(1,3)),axis=0)
                         SOGroupIDs[SOGroupOffset[SOTotNgroups]:SOTotNids]=meshids[rslpart]
                         SOTotNgroups+=1   
+                    else:   ##We only taken out the particles(within half of the radius) of the density loop
+                        rslpart=lmgidp[indrs[0:np.int32(rindlr[0]/2)]]
                 else:
                     SOpotPos=np.append(SOpotPos,np.reshape(ppos,(1,3)),axis=0)
                     SOGroupMass=np.append(SOGroupMass,CRmas[rindlr[0]])
@@ -142,7 +144,7 @@ def grouping(outfiles,Numcut,boxsize,binsize,bufsize,scfa,SOpho,ii,meshids,meshp
     ff.write(SOGroupIDs)
     ff.close()
 
-    return SOTotNgroups,SOTotNids,SOGroupLen,SOGroupOffset[:SOTotNgroups],SOGroupMass,SOR500,SOpotPos,SOmcPos,SOPids,SOGroupIDs
+    return SOTotNgroups #,SOTotNids,SOGroupLen,SOGroupOffset[:SOTotNgroups],SOGroupMass,SOR500,SOpotPos,SOmcPos,SOPids,SOGroupIDs
 
 def grouping_nl(outfiles,Numcut,boxsize,binsize,bufsize,scfa,SOpho,ii,meshids,meshpos,meshmas,dens,phobase):
 
@@ -276,7 +278,7 @@ def grouping_nl(outfiles,Numcut,boxsize,binsize,bufsize,scfa,SOpho,ii,meshids,me
         else:
             Ncount+=1
         blp[rslpart]=False
-        dens[rslpart]=-1*dens[rslpart]
+        dens[rslpart]=-1*np.abs(dens[rslpart])
 
     ff=open(outfiles+"."+str(ii),'wb')
     d1=pack('q q q',SOTotNgroups,SOTotNids,bins3)
