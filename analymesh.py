@@ -280,6 +280,7 @@ def grouping_nl(outfiles,Numcut,boxsize,binsize,bufsize,scfa,SOpho,ii,meshids,me
         blp[rslpart]=False
         dens[rslpart]=-1*np.abs(dens[rslpart])
 
+    SOGroupIDs=SOGroupIDs[:SOTotNids]
     ff=open(outfiles+"."+str(ii),'wb')
     d1=pack('q q q',SOTotNgroups,SOTotNids,bins3)
     ff.write(d1)
