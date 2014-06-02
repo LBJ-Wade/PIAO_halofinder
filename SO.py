@@ -4,10 +4,12 @@ import numpy as np
 from time import time
 from ckdtree import cKDTree
 from analymesh import grouping, grouping_nl
-from writedata import writedata,readdata_smp,readdata_acc
+from writedata import writedata,readdata_smp
 from dprofile import profile
 from mpi4py import MPI
 import os
+import argparse
+import ConfigParser
 
 #init
 comm=MPI.COMM_WORLD
@@ -17,24 +19,43 @@ if rank==0:
     print "Processes,", size
     st=time()
 
-#****** Input Parameter *************#
-wrtpth="/home/wgcui/data/MUPPI/data/"  #Where your tmp data and SO group info will be saved.
-binsize=6000.                     #meshbin size, lager than bufsize, in Kpc/h
-bufsize=2000.                        #buffer  size, lager than the most massive halo mass radius *2
-Numcut=50.                           #Min particle number within each SO group
-nbs=aa                               #SPH neighbours
-overlap=True                         #True or False, allow halo to overlap or not
-longid =False #True                        #If particle id requires long long, or not
-phot=np.array(["500","VIR"])  #Add here all the interested overdensities
-skip1 =True  #False                          #skip first meshing step
-skip2 =False #True                          #skip Second meshing step
+#agrparse
+parser = argparse.ArgumentParser(argument_default=argparse.SUPPRESS,add_help=True)
+parser.add_argument('pfile', nargs='?', default="param.txt", \
+    help='input parameter file. If nothing is given, we try with param.txt')
+parser.add_argument('-skip', type=int, default=0, dest='skip',\
+    help='Skipping 1 (-skip 1) or 2 (-skip 2) part of the calculation')
+parser.add_argument('--version', action='version', version='PIAO, 1.0')
+results = parser.parse_args()
+if rank==0:
+    print "Tring to read parameter file : ", results.pfile
 
-#******* Snapshot input parameter*************#
-snapth="/home/wgcui/data/MUPPI/" #snapshot file path
-snn=64                               #snapshot output number
-fnum=4                              #snapshot file number
-spnm="snap_le_"                     #snapshot base name
-edn='='
+config = ConfigParser.RawConfigParser()
+config.read(results.pfile)
+wrtpth=config.get('ipp', 'wrtpth')
+binsize=config.getfloat('ipp','binsize')
+bufsize=config.getfloat('ipp','bufsize')
+Numcut=config.getfloat('ipp','Numcut')
+nbs=config.getint('ipp','nbs')
+overlap=config.getboolean('ipp','overlap')
+longid=config.getboolean('ipp','longid')
+phot=config.get('ipp', 'phot')
+phot=phot.strip('[]').split(',')
+if rank==0:
+    print "Overdensity was set to ", phot
+
+snapth=config.get('sip','snapth')
+snn=config.getint('sip','snn')
+fnum=config.getint('sip','fnum')
+spnm=config.get('sip','spnm')
+edn=config.get('sip','edn')
+
+if rank==0:
+    if results.skip==0:
+        print "We run the whole program, :)"
+    else:    
+        print "Try to skip the", results.skip, " part of the calculation" 
+
 exts='000'+str(snn)
 exts=exts[-3:]
 head=readsnapsgl(snapth+"/snapdir_"+exts+"/"+spnm+exts+".0","HEAD",endian=edn)
@@ -66,7 +87,7 @@ if rank == 0:
     print "output SO overdensity", SOpho, " for ", phot
 
 #Step 1 meshing data
-if (not skip1):  #SKIP step 1
+if results.skip != 1:  #SKIP step 1
     if rank ==0:
         if os.path.isdir(tmpph):
             os.system('rm -rf %s' %tmpph)
@@ -95,7 +116,7 @@ if rank==0:
     print "meshing time:",time()-st
 
 ##Step two, SO groups, analysis each mesh one by one 
-if (not skip2):  #SKIP step 2
+if results.skip != 2:  #SKIP step 2
     if rank ==0:
         for ot in phot:
             if overlap:
