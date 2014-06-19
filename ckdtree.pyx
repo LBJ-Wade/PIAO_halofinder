@@ -2134,13 +2134,13 @@ cdef class cKDTree:
         cdef np.ndarray[np.intp_t, ndim=1] ii
         cdef np.ndarray[np.float64_t, ndim=1] dd
         cdef np.ndarray[np.float64_t, ndim=2] xx
-        cdef np.ndarray[np.float32_t, ndim=1] dens
+        cdef np.ndarray[np.float64_t, ndim=1] dens
         cdef np.intp_t c, n, i, km1
         cdef np.float64_t rcut
         km1=k-1
         rcut=0.
         x = np.asarray(x).astype(np.float64)
-        mass=np.asarray(mass).astype(np.float32)
+        mass=np.asarray(mass).astype(np.float64)
         if mass.size==1:
             sm = True
         else:
@@ -2161,16 +2161,16 @@ cdef class cKDTree:
         xx = np.ascontiguousarray(xx,dtype=np.float64)
         dd = np.empty((k),dtype=np.float64)
         dd.fill(infinity)
-        dens=np.empty(n,dtype=np.float32)
+        dens=np.empty(n,dtype=np.float64)
         dens.fill(0)
         ii = np.empty((k),dtype=np.intp)
         ii.fill(self.n)
 
         if phoc > 0:
             if sm:
-                rcut=(mass*k*3.0/4.0/3.14159/phoc)**(1.0/3.0)
+                rcut=(mass*k*3.0/4.0/np.pi/phoc)**(1.0/3.0)
             else:
-                rcut=(np.max(mass)*k*3.0/4.0/3.14159/phoc)**(1.0/3.0)
+                rcut=(np.max(mass)*k*3.0/4.0/np.pi/phoc)**(1.0/3.0)
 
         if sm:
             if phoc > 0:   # output only higher density than phoc
