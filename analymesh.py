@@ -4,7 +4,7 @@ from struct import *
 
 def grouping(outfiles,Numcut,boxsize,binsize,bufsize,scfa,SOpho,ii,meshids,meshpos,meshmas,dens, phobase):
 
-    bins=np.int64(np.ceil(boxsize/binsize))
+    bins=np.intp(np.ceil(boxsize/binsize))
     bins2=bins*bins
     bins3=bins2*bins
     if meshmas.size == 1:
@@ -27,7 +27,7 @@ def grouping(outfiles,Numcut,boxsize,binsize,bufsize,scfa,SOpho,ii,meshids,meshp
     nxyz=np.int64(np.array([ii/bins2,np.mod(ii,bins2)/bins,np.mod(np.mod(ii,bins2),bins)]))
     xyzmin,xyzmmin=nxyz*binsize,nxyz*binsize-bufsize
     xyzmax=(nxyz+1)*binsize
-    lmbs=np.intp(binsize/50.)
+    lmbs=np.intp(binsize/50.)  #reseparate the meshbox into 125000 subboxes.
     lbn=np.int32(np.ceil((binsize+2*bufsize)/lmbs))
     xyz=np.uint32((meshpos-xyzmmin)/lmbs)
     xyz=xyz[:,0]*lbn*lbn+xyz[:,1]*lbn+xyz[:,2]
@@ -35,7 +35,7 @@ def grouping(outfiles,Numcut,boxsize,binsize,bufsize,scfa,SOpho,ii,meshids,meshp
     for i in np.arange(xyz.size):
         H2[xyz[i]]+=1
     xyz=np.argsort(xyz)
-    hcum2 =np.cumsum(H2)
+    hcum2 =np.cumsum(H2,dtype=np.int64)
     Ncount=0
 
     while True:     #Loop for peaks and SO groups
@@ -62,21 +62,21 @@ def grouping(outfiles,Numcut,boxsize,binsize,bufsize,scfa,SOpho,ii,meshids,meshp
                 if H2[jj]>0:
                     lmgidp=np.append(lmgidp,xyz[hcum2[jj]-H2[jj]:hcum2[jj]])
             
-            Radius=np.sqrt(np.sum((meshpos[lmgidp]-ppos)**2,axis=1))
+            Radius=np.sqrt(np.sum((meshpos[lmgidp]-ppos)**2,axis=1,dtype=np.float64))
             indrs =np.argsort(Radius)
             Radius=Radius[indrs]
             if sglmass:
                 CRmas =np.arange(1,Radius.size+1,dtype='float32')*meshmas
             else:
                 CRmas =meshmas[lmgidp[indrs]]
-                CRmas =np.cumsum(CRmas)
+                CRmas =np.cumsum(CRmas,dtype=np.float64)
             CRad  =(Radius[1:]+Radius[:-1])/2.        
             Rho   =CRmas[:-1]/(4.*np.pi*(CRad*scfa)**3/3.)
             rindlr=np.where(Rho<=SOpho)[0]            
-            if rindlr.size==0:
+            #if rindlr.size==0:
+            #    rrag*=4.
+            if CRad[rindlr[0]] > 0.5*rrag: #keep the distance to bounder at least half sub-boxsize
                 rrag*=3.
-            elif CRad[rindlr[0]]>0.9*rrag:
-                rrag*=2.
             else:
                 rslpart=lmgidp[indrs[0:rindlr[0]+1]]
                 gradius=CRad[rindlr[0]]
@@ -87,7 +87,7 @@ def grouping(outfiles,Numcut,boxsize,binsize,bufsize,scfa,SOpho,ii,meshids,meshp
             if (rpxyz[0]==nxyz[0]) & (rpxyz[1]==nxyz[1]) &(rpxyz[2]==nxyz[2]):   #if the new postion out of base box, we will drop it 
                 mtdenpos=np.argmax(np.abs(dens[rslpart]))
                 if dens[didp]<np.abs(dens[rslpart][mtdenpos]):  #other higher density peak in this group
-                    distog=np.sqrt(np.sum((SOpotPos-ppos)**2,axis=1))  #check for already identified groups
+                    distog=np.sqrt(np.sum((SOpotPos-ppos)**2,axis=1,dtype=np.float64))  #check for already identified groups
                     mtid=np.where(distog<gradius)[0]
                     #if meshids[rslpart][mtdenpos] in SOPids:
                     if (len(mtid)>0) & (meshids[rslpart][mtdenpos] in SOPids):  #Other identified groups lie in this group. Take them as its substructures and remove by M*-1
@@ -104,7 +104,7 @@ def grouping(outfiles,Numcut,boxsize,binsize,bufsize,scfa,SOpho,ii,meshids,meshp
                             SOmcPos=np.append(SOmcPos,np.reshape(np.mean(meshpos[rslpart,:],axis=0),(1,3)),axis=0)
                         else:
                             SOmcPos=np.append(SOmcPos,np.reshape(np.sum(np.multiply(
-                                meshpos[rslpart,:].transpose(),meshmas[rslpart]),axis=1)
+                                meshpos[rslpart,:].transpose(),meshmas[rslpart]),axis=1,dtype=np.float64)
                                 /SOGroupMass[SOTotNgroups],(1,3)),axis=0)
                         SOGroupIDs[SOGroupOffset[SOTotNgroups]:SOTotNids]=meshids[rslpart]
                         SOTotNgroups+=1   
@@ -122,7 +122,7 @@ def grouping(outfiles,Numcut,boxsize,binsize,bufsize,scfa,SOpho,ii,meshids,meshp
                         SOmcPos=np.append(SOmcPos,np.reshape(np.mean(meshpos[rslpart,:],axis=0),(1,3)),axis=0)
                     else:
                         SOmcPos=np.append(SOmcPos,np.reshape(np.sum(np.multiply(
-                            meshpos[rslpart,:].transpose(),meshmas[rslpart]),axis=1)
+                            meshpos[rslpart,:].transpose(),meshmas[rslpart]),axis=1,dtype=np.float64)
                             /SOGroupMass[SOTotNgroups],(1,3)),axis=0)
                     SOGroupIDs[SOGroupOffset[SOTotNgroups]:SOTotNids]=meshids[rslpart]
                     SOTotNgroups+=1   
@@ -148,7 +148,7 @@ def grouping(outfiles,Numcut,boxsize,binsize,bufsize,scfa,SOpho,ii,meshids,meshp
 
 def grouping_nl(outfiles,Numcut,boxsize,binsize,bufsize,scfa,SOpho,ii,meshids,meshpos,meshmas,dens,phobase):
 
-    bins=np.int64(np.ceil(boxsize/binsize))
+    bins=np.intp(np.ceil(boxsize/binsize))
     bins2=bins*bins
     bins3=bins2*bins
     if meshmas.size == 1:
@@ -180,7 +180,7 @@ def grouping_nl(outfiles,Numcut,boxsize,binsize,bufsize,scfa,SOpho,ii,meshids,me
     for i in np.arange(xyz.size):
         H2[xyz[i]]+=1
     xyz=np.argsort(xyz)
-    hcum2 =np.cumsum(H2)
+    hcum2 =np.cumsum(H2,dtype=np.int64)
     blp=np.ones(meshids.size,dtype='bool')
     Ncount=0
 
@@ -208,21 +208,21 @@ def grouping_nl(outfiles,Numcut,boxsize,binsize,bufsize,scfa,SOpho,ii,meshids,me
                 if H2[jj]>0:
                     lmgidp=np.append(lmgidp,xyz[hcum2[jj]-H2[jj]:hcum2[jj]])
             blgidp=lmgidp[blp[lmgidp]]
-            Radius=np.sqrt(np.sum((meshpos[blgidp]-ppos)**2,axis=1))
+            Radius=np.sqrt(np.sum((meshpos[blgidp]-ppos)**2,axis=1,dtype=np.float64))
             indrs =np.argsort(Radius)
             Radius=Radius[indrs]
             if sglmass:
                 CRmas =np.arange(1,Radius.size+1,dtype='float32')*meshmas
             else:
                 CRmas =meshmas[blgidp[indrs]]
-                CRmas =np.cumsum(CRmas)
+                CRmas =np.cumsum(CRmas,dtype=np.float64)
             CRad  =(Radius[1:]+Radius[:-1])/2.        
             Rho   =CRmas[:-1]/(4.*np.pi*(CRad*scfa)**3/3.)
             rindlr=np.where(Rho<=SOpho)[0]            
-            if rindlr.size==0:
+            #if rindlr.size==0:
+            #    rrag*=3.
+            if CRad[rindlr[0]]>0.5*rrag:
                 rrag*=3.
-            elif CRad[rindlr[0]]>0.9*rrag:
-                rrag*=2.
             else:
                 rslpart=blgidp[indrs[0:rindlr[0]+1]]
                 gradius=CRad[rindlr[0]]
@@ -242,22 +242,22 @@ def grouping_nl(outfiles,Numcut,boxsize,binsize,bufsize,scfa,SOpho,ii,meshids,me
                     SOmcPos=np.append(SOmcPos,np.reshape(np.mean(meshpos[rslpart,:],axis=0),(1,3)),axis=0)
                 else:
                     SOmcPos=np.append(SOmcPos,np.reshape(np.sum(np.multiply(
-                        meshpos[rslpart,:].transpose(),meshmas[rslpart]),axis=1)
+                        meshpos[rslpart,:].transpose(),meshmas[rslpart]),axis=1,dtype=np.float64)
                         /SOGroupMass[SOTotNgroups],(1,3)),axis=0)
 
                 if SOTotNgroups != 0: #check for other groups in this new identified group
-                    distog=np.sqrt(np.sum((SOpotPos-ppos)**2,axis=1))
+                    distog=np.sqrt(np.sum((SOpotPos-ppos)**2,axis=1,dtype=np.float64))
                     idindt=np.where(distog<gradius)[0]
                 else:
                     idindt=np.array([])
                 SOpotPos=np.append(SOpotPos,np.reshape(ppos,(1,3)),axis=0) #After checking
                 if len(idindt)>0:     #True
                     SOTotNids-=rindlr[0]+1
-                    Rho=(CRmas[:-1]+np.sum(SOGroupMass[idindt]))/(4.*np.pi*(CRad*scfa)**3/3.)
+                    Rho=(CRmas[:-1]+np.sum(SOGroupMass[idindt],dtype=np.float64))/(4.*np.pi*(CRad*scfa)**3/3.)
                     rindlr=np.where(Rho<=SOpho)[0]
                     llpart=len(rslpart)
                     rslpart=blgidp[indrs[0:rindlr[0]+1]]
-                    SOGroupMass[-1]=CRmas[rindlr[0]]+np.sum(SOGroupMass[idindt])
+                    SOGroupMass[-1]=CRmas[rindlr[0]]+np.sum(SOGroupMass[idindt],dtype=np.float64)
                     SOR500[-1]=CRad[rindlr[0]]
                     SOGroupMass[idindt]=-1*np.abs(SOGroupMass[idindt])
                     SOGroupLen[-1]=rindlr[0]+1

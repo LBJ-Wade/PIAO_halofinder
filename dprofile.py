@@ -72,29 +72,29 @@ def profile(ii,boxsize,binsize,bufsize,lgid,wrtpth,scfa,meshinfo,goupinfo):
             gtpos=meshpos[posgid,:]
             #cc=gtpos[gid0p,:]
             cc=GroupptPos[gn]
-            rdius=np.sqrt(np.sum((gtpos-cc)**2,axis=1))
+            rdius=np.sqrt(np.sum((gtpos-cc)**2,axis=1,dtype=np.float64))
             gidmas=meshmas[posgid]
             bnmas,b=np.histogram(rdius,bins=rbin,weights=gidmas)
-            tdp[NN,:]=np.cumsum(bnmas)/(4.*np.pi*(rbin[1:]*scfa)**3/3.)
+            tdp[NN,:]=np.cumsum(bnmas,dtype=np.float64)/(4.*np.pi*(rbin[1:]*scfa)**3/3.)
 
         if idn ==-1:
             posidm=np.zeros(gids.size,dtype='int64')-1
             md=match2arr(gids[stgid],DMids,posidm)
             iddm=posidm>=0
             gdmpos=DMpos[posidm[iddm],:]
-            rdsdm=np.sqrt(np.sum((gdmpos-cc)**2,axis=1))
+            rdsdm=np.sqrt(np.sum((gdmpos-cc)**2,axis=1,dtype=np.float64))
             gdmmas=DMmas[posidm[iddm]]
             bdmas,b=np.histogram(rdsdm,bins=rbin,weights=gdmmas)
-            dmdp[NN,:]=np.cumsum(bdmas)/(4.*np.pi*(rbin[1:]*scfa)**3/3.)
+            dmdp[NN,:]=np.cumsum(bdmas,dtype=np.float64)/(4.*np.pi*(rbin[1:]*scfa)**3/3.)
 
             posist=np.zeros(gids.size,dtype='int64')-1
             ms=match2arr(gids[stgid],STids,posist)
             idst=posist>=0
             gstpos=STpos[posist[idst],:]
-            rdsst=np.sqrt(np.sum((gstpos-cc)**2,axis=1))
+            rdsst=np.sqrt(np.sum((gstpos-cc)**2,axis=1,dtype=np.float64))
             gstmas=STmas[posist[idst]]
             bsmas,b=np.histogram(rdsst,bins=rbin,weights=gstmas)
-            stdp[NN,:]=np.cumsum(bsmas)/(4.*np.pi*(rbin[1:]*scfa)**3/3.)
+            stdp[NN,:]=np.cumsum(bsmas,dtype=np.float64)/(4.*np.pi*(rbin[1:]*scfa)**3/3.)
 
     ff=open(wrtpth+"/DP."+str(ii),'wb')
     ff.write(np.int32(mtid.size))

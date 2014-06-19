@@ -28,7 +28,7 @@ def writedata(wpath,rpath,exts,spnm,binsize,ii,lgid,edn=None):
     for i in np.arange(npart.size):
         cumpart[i+1]=cumpart[i]+npart[i]
     boxsize=head[5]
-    bins=np.int64(np.ceil(boxsize/binsize))
+    bins=np.intp(np.ceil(boxsize/binsize))
     bins2=bins*bins
     bins3=bins2*bins
 
@@ -45,8 +45,8 @@ def writedata(wpath,rpath,exts,spnm,binsize,ii,lgid,edn=None):
         for j in range(cumpart[i],cumpart[i+1]):
             mpart[xyz[j],i]+=1
 
-    H=np.sum(mpart,axis=1,dtype=np.uint32)
-    hcum=np.cumsum(H)
+    H=np.sum(mpart,axis=1,dtype=np.int64)
+    hcum=np.cumsum(H,dtype=np.int64)
     xyz=np.argsort(xyz)
     pot=readsnapsgl(rpath+"/snapdir_"+exts+"/"+spnm+exts+"."+str(ii),"POT ",endian=edn,quiet=1)
     mass=readsnapsgl(rpath+"/snapdir_"+exts+"/"+spnm+exts+"."+str(ii),"MASS",endian=edn,quiet=1)
@@ -78,7 +78,7 @@ def writedata(wpath,rpath,exts,spnm,binsize,ii,lgid,edn=None):
     return len(mass)
 
 def readdata_smp(ii,tmpph,boxsize,binsize,bufsize,fnum,lgid):
-    bins=np.int64(np.ceil(boxsize/binsize))
+    bins=np.intp(np.ceil(boxsize/binsize))
     bins2=bins*bins
     bins3=bins2*bins
 
@@ -93,7 +93,7 @@ def readdata_smp(ii,tmpph,boxsize,binsize,bufsize,fnum,lgid):
     meshnum=np.zeros(27,dtype=np.intp)
     meshnpt=np.zeros((27,fnum,6),dtype=np.intp)
     mnm    =0
-    xyz=np.int64(np.array([ii/bins2,np.mod(ii,bins2)/bins,np.mod(np.mod(ii,bins2),bins)]))
+    xyz=np.intp(np.array([ii/bins2,np.mod(ii,bins2)/bins,np.mod(np.mod(ii,bins2),bins)]))
 
     for iii in [xyz[0]-1,xyz[0],xyz[0]+1]:
         if iii == -1:
@@ -152,8 +152,8 @@ def readdata_smp(ii,tmpph,boxsize,binsize,bufsize,fnum,lgid):
                                 (tmpmpos[:,1]>=xyz[1]*binsize-bufsize)&(tmpmpos[:,1]<(xyz[1]+1)*binsize+bufsize)& \
                                 (tmpmpos[:,2]>=xyz[2]*binsize-bufsize)&(tmpmpos[:,2]<(xyz[2]+1)*binsize+bufsize)
                             for kkkk in range(6):
-                                meshnpt[mnm,fn,kkkk]=len(tmpmids[idinbuf[np.sum(mpart[0:kkkk]):np.sum(mpart[0:kkkk]) \
-                                                                             +mpart[kkkk]]])
+                                meshnpt[mnm,fn,kkkk]=len(tmpmids[idinbuf[np.sum(mpart[0:kkkk],dtype=np.int64): \
+                                                                             np.sum(mpart[0:kkkk],dtype=np.int64)+mpart[kkkk]]])
                             tmpmids=tmpmids[idinbuf]
                             tmpbfn=len(tmpmids)
                             tmpmpos=tmpmpos[idinbuf,:]

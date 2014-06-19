@@ -63,9 +63,12 @@ head=readsnapsgl(snapth+"/snapdir_"+exts+"/"+spnm+exts+".0","HEAD",endian=edn)
 bmpc=str(np.intp(np.round(binsize/1000.)))+"Mpc"
 tmpph =wrtpth+"tmpdata_"+exts+"_"+bmpc+"/"
 boxsize=head[5]
-bins=np.int64(np.ceil(boxsize/binsize))
+bins=np.intp(np.ceil(boxsize/binsize))
 bins2=bins*bins
 bins3=bins2*bins
+if bins>=1000:
+    print "We do not recommend to use such large number sub boxes : ", bins3
+
 HubbleParam,Omega0,OmegaLambda=head[8],head[6],head[7]
 redshift,scfa = head[3],head[2]
 pho_crit = 2.7753619773421899e-08  #Unit [10^10 M_sun/h] / [(kpc/h)^3] at redshift 0

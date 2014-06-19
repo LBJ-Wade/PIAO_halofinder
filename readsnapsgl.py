@@ -45,7 +45,7 @@ def readsnapsgl(filename,block,endian=None,quiet=None,longid=None,met=None, fmt=
                 if len(npart[idg1])==1:
                     return masstbl[idg1]
                 else:   #multi masstble
-                    totmass=np.zeros(np.sum(npart),dtype='float32')
+                    totmass=np.zeros(np.sum(npart,dtype=np.int64),dtype='float32')
                     countnm=0
                     for i in np.arange(6):
                         if npart[i]>0:
@@ -59,7 +59,7 @@ def readsnapsgl(filename,block,endian=None,quiet=None,longid=None,met=None, fmt=
             if block=="MASS":      #We fill the mass with the mass tbl value if needed
                 idg0=(npart>0) & (masstbl>0)
                 if len(npart[idg0])>0:
-                    totmass=np.zeros(np.sum(npart),dtype='float32')
+                    totmass=np.zeros(np.sum(npart,dtype=int64),dtype='float32')
                     bgc=0
                     subc=0
                     for k in np.arange(6):
@@ -79,10 +79,12 @@ def readsnapsgl(filename,block,endian=None,quiet=None,longid=None,met=None, fmt=
                 else:
                     mass=read_block(npf,"MASS",endian,1,longid,fmt)
                 zs=np.zeros(npart[0]+npart[4],dtype=subdata.dtype)
-                zs[0:npart[0]]=np.sum(subdata[0:npart[0],1:],axis=1)/(mass[0:npart[0]]-np.sum(subdata[0:npart[0],:],axis=1))
+                zs[0:npart[0]]=np.sum(subdata[0:npart[0],1:],axis=1,dtype=np.float64)/ \
+                    (mass[0:npart[0]]-np.sum(subdata[0:npart[0],:],axis=1,dtype=np.float64))
                 mass=0
                 im=read_block(npf,"iM  ",endian,1,longid,fmt)
-                zs[npart[0]:] =np.sum(subdata[npart[0]:,1:],axis=1)/(im-np.sum(subdata[npart[0]:,:],axis=1))
+                zs[npart[0]:] =np.sum(subdata[npart[0]:,1:],axis=1,dtype=np.float64)/ \
+                    (im-np.sum(subdata[npart[0]:,:],axis=1,dtype=np.float64))
                 im,subdata=0,0
                 return zs
             else:
