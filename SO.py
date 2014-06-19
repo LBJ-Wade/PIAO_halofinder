@@ -56,9 +56,16 @@ if rank==0:
     else:    
         print "Try to skip the", results.skip, " part of the calculation" 
 
-exts='000'+str(snn)
-exts=exts[-3:]
-head=readsnapsgl(snapth+"/snapdir_"+exts+"/"+spnm+exts+".0","HEAD",endian=edn)
+if snn == -1:
+    exts=''
+else:
+    exts='000'+str(snn)
+    exts=exts[-3:]
+
+if fnum<=1:
+    head=readsnapsgl(snapth+"/"+spnm+exts,"HEAD",endian=edn)
+else:
+    head=readsnapsgl(snapth+"/"+spnm+exts+".0","HEAD",endian=edn)
 
 bmpc=str(np.intp(np.round(binsize/1000.)))+"Mpc"
 tmpph =wrtpth+"tmpdata_"+exts+"_"+bmpc+"/"
@@ -111,7 +118,7 @@ if results.skip != 1:  #SKIP step 1
         while not(Final):
             ii=comm.recv(source=0,tag=3)
             aa=writedata(tmpph,snapth,exts,
-                spnm,binsize,ii,longid,edn=edn)
+                spnm,binsize,fnum,ii,longid,edn=edn)
             comm.send(rank,dest=0,tag=1)
             Final=comm.recv(source=0,tag=2)
 if rank==0:
@@ -157,7 +164,7 @@ if results.skip != 2:  #SKIP step 2
             dens=Mtree.qdens(meshpos,meshmas,nbs,phoc=SOpho.min())
             #print "denstime",time()-st
 
-            for ot in range(phot.size):
+            for ot in range(len(phot)):
                 phobase=phomean*SOpho[ot]/pho_crit*Omega0
                 if overlap:
                     outph =wrtpth+"Groups_"+phot[ot]+"_"+exts+"_"+bmpc+"_"+str(nbs)+"/"

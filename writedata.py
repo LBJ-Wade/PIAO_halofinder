@@ -5,7 +5,7 @@ from struct import *
 import os
 import time
 
-def writedata(wpath,rpath,exts,spnm,binsize,ii,lgid,edn=None):
+def writedata(wpath,rpath,exts,spnm,binsize,fnum,ii,lgid,edn=None):
     """
     Writing data into mesh bins
     wpath : where mesh files are written
@@ -22,7 +22,10 @@ def writedata(wpath,rpath,exts,spnm,binsize,ii,lgid,edn=None):
 
     np.savetxt(wpath+"indicator"+"."+str(ii), [1])
 
-    head=readsnapsgl(rpath+"/snapdir_"+exts+"/"+spnm+exts+"."+str(ii),"HEAD",endian=edn)
+    if fnum<=1:
+        head=readsnapsgl(rpath+"/"+spnm+exts,"HEAD",endian=edn)
+    else:
+        head=readsnapsgl(rpath+"/"+spnm+exts+"."+str(ii),"HEAD",endian=edn)
     npart=head[0]
     cumpart=np.zeros(npart.size+1,dtype=np.intp)
     for i in np.arange(npart.size):
@@ -32,11 +35,12 @@ def writedata(wpath,rpath,exts,spnm,binsize,ii,lgid,edn=None):
     bins2=bins*bins
     bins3=bins2*bins
 
-    if lgid:
-        ID=readsnapsgl(rpath+"/snapdir_"+exts+"/"+spnm+exts+"."+str(ii),"ID  ",endian=edn,quiet=1,longid=lgid)
+    if fnum<=1:
+        ID=readsnapsgl(rpath+"/"+spnm+exts,"ID  ",endian=edn,quiet=1,longid=lgid)
+        pos=readsnapsgl(rpath+"/"+spnm+exts,"POS ",endian=edn,quiet=1)
     else:
-        ID=readsnapsgl(rpath+"/snapdir_"+exts+"/"+spnm+exts+"."+str(ii),"ID  ",endian=edn,quiet=1)
-    pos=readsnapsgl(rpath+"/snapdir_"+exts+"/"+spnm+exts+"."+str(ii),"POS ",endian=edn,quiet=1)
+        ID=readsnapsgl(rpath+"/"+spnm+exts+"."+str(ii),"ID  ",endian=edn,quiet=1,longid=lgid)
+        pos=readsnapsgl(rpath+"/"+spnm+exts+"."+str(ii),"POS ",endian=edn,quiet=1)
     xyz=np.uint32(pos/binsize)
     xyz=xyz[:,0]*bins2+xyz[:,1]*bins+xyz[:,2]
     #H=np.zeros(bins3,dtype='uint32')
@@ -48,8 +52,12 @@ def writedata(wpath,rpath,exts,spnm,binsize,ii,lgid,edn=None):
     H=np.sum(mpart,axis=1,dtype=np.int64)
     hcum=np.cumsum(H,dtype=np.int64)
     xyz=np.argsort(xyz)
-    pot=readsnapsgl(rpath+"/snapdir_"+exts+"/"+spnm+exts+"."+str(ii),"POT ",endian=edn,quiet=1)
-    mass=readsnapsgl(rpath+"/snapdir_"+exts+"/"+spnm+exts+"."+str(ii),"MASS",endian=edn,quiet=1)
+    if fnum<=1:
+        #pot=readsnapsgl(rpath+"/"+spnm,"POT ",endian=edn,quiet=1)
+        mass=readsnapsgl(rpath+"/"+spnm,"MASS",endian=edn,quiet=1)
+    else:
+        #pot=readsnapsgl(rpath+"/"+spnm+exts+"."+str(ii),"POT ",endian=edn,quiet=1)
+        mass=readsnapsgl(rpath+"/"+spnm+exts+"."+str(ii),"MASS",endian=edn,quiet=1)
 
     for j in range(0,ii):
         while os.path.isfile(wpath+"indicator"+"."+str(j)):
@@ -58,7 +66,7 @@ def writedata(wpath,rpath,exts,spnm,binsize,ii,lgid,edn=None):
     for i in np.arange(bins3):
         ff=open(wpath+"tdata_"+str(i)+".dat",'ab')
 
-        ff.write(H[i])
+        ff.write(np.int32(H[i]))
         if len(mass) ==1:
             ff.write(np.float32(mass))
         else:
@@ -71,7 +79,7 @@ def writedata(wpath,rpath,exts,spnm,binsize,ii,lgid,edn=None):
             ff.write(pos[tmpos,:])
             if len(mass) !=1:
                 ff.write(mass[tmpos])
-            ff.write(pot[tmpos])
+            #ff.write(pot[tmpos])
         ff.close()
 
     os.remove(wpath+"indicator"+"."+str(ii))
@@ -143,7 +151,7 @@ def readdata_smp(ii,tmpph,boxsize,binsize,bufsize,fnum,lgid):
                             np.array([[warp_x,warp_y,warp_z]])
                         if sglmass==0:
                             tmpmmas=np.ndarray(shape=H,dtype='float32',buffer=opf.read(4*H))
-                        tmpmpot=np.ndarray(shape=H,dtype='float32',buffer=opf.read(4*H))
+                        #tmpmpot=np.ndarray(shape=H,dtype='float32',buffer=opf.read(4*H))
                         if ((iii==xyz[0])&(jjj==xyz[1])&(kkk==xyz[2])) | (bufsize>=binsize):
                             tmpbfn=H
                             meshnpt[mnm,fn,:]=mpart
@@ -159,13 +167,13 @@ def readdata_smp(ii,tmpph,boxsize,binsize,bufsize,fnum,lgid):
                             tmpmpos=tmpmpos[idinbuf,:]
                             if sglmass==0:
                                 tmpmmas=tmpmmas[idinbuf]
-                            tmpmpot=tmpmpot[idinbuf]
+                            #tmpmpot=tmpmpot[idinbuf]
 
                         meshids=np.append(meshids,tmpmids)
                         meshpos=np.append(meshpos,tmpmpos,axis=0)
                         if sglmass==0:
                             meshmas=np.append(meshmas,tmpmmas)
-                        meshpot=np.append(meshpot,tmpmpot)
+                        #meshpot=np.append(meshpot,tmpmpot)
                     meshnum[mnm]+=tmpbfn
 
                 opf.close()

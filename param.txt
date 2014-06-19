@@ -1,19 +1,19 @@
 
 #****** Input Parameter *************#
 [ipp]
-wrtpth=/home/wgcui/data/MUPPI/data/  	;#Where your tmp data and SO group info will be saved.
-binsize=6000.                     	;#meshbin size, lager than bufsize, in Kpc/h
+wrtpth=../Downloads/		  	;#Where your tmp data and SO group info will be saved.
+binsize=10000.                     	;#meshbin size, lager than bufsize, in Kpc/h
 bufsize=2000.                        	;#buffer  size, lager than the most massive halo mass radius *2
-Numcut=50.                           	;#Min particle number within each SO group
+Numcut=250.                           	;#Min particle number within each SO group
 nbs=64                               	;#SPH neighbours
 overlap=True                         	;#True or False, allow halo to overlap or not
 longid =False 		                ;#If particle id requires long long, or not
-phot=[500,VIR]		  		;#Add here all the interested overdensities
+phot=[500]		  		;#Add here all the interested overdensities
 
 #******* Snapshot input parameter*************#
 [sip]
-snapth=/home/wgcui/data/MUPPI/ 		;#snapshot file path
-snn=64                               	;#snapshot output number
-fnum=4                              	;#snapshot file number
-spnm=snap_le_                     	;#snapshot base name
+snapth=../Downloads/	 		;#snapshot file path
+snn=-1                               	;#snapshot output number put -1 will give no exts
+fnum=1                              	;#snapshot file number
+spnm=snap100Mpc128_z0                 	;#snapshot base name
 edn= =					;endian

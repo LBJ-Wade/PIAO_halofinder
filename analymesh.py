@@ -73,9 +73,9 @@ def grouping(outfiles,Numcut,boxsize,binsize,bufsize,scfa,SOpho,ii,meshids,meshp
             CRad  =(Radius[1:]+Radius[:-1])/2.        
             Rho   =CRmas[:-1]/(4.*np.pi*(CRad*scfa)**3/3.)
             rindlr=np.where(Rho<=SOpho)[0]            
-            #if rindlr.size==0:
-            #    rrag*=4.
-            if CRad[rindlr[0]] > 0.5*rrag: #keep the distance to bounder at least half sub-boxsize
+            if rindlr.size==0:
+                rrag*=4.
+            elif CRad[rindlr[0]] > 0.5*rrag: #keep the distance to bounder at least half sub-boxsize
                 rrag*=3.
             else:
                 rslpart=lmgidp[indrs[0:rindlr[0]+1]]
@@ -219,9 +219,9 @@ def grouping_nl(outfiles,Numcut,boxsize,binsize,bufsize,scfa,SOpho,ii,meshids,me
             CRad  =(Radius[1:]+Radius[:-1])/2.        
             Rho   =CRmas[:-1]/(4.*np.pi*(CRad*scfa)**3/3.)
             rindlr=np.where(Rho<=SOpho)[0]            
-            #if rindlr.size==0:
-            #    rrag*=3.
-            if CRad[rindlr[0]]>0.5*rrag:
+            if rindlr.size==0:
+                rrag*=4.
+            elif CRad[rindlr[0]]>0.5*rrag:
                 rrag*=3.
             else:
                 rslpart=blgidp[indrs[0:rindlr[0]+1]]

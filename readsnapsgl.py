@@ -4,6 +4,7 @@ from time import time
 
 def readsnapsgl(filename,block,endian=None,quiet=None,longid=None,met=None, fmt=None):
     #little endian : ">", big endian : "<", other/default : "=" or "@"
+    #longid False or leave it empty for not using. =True if long id is needed
     # met, "z", if you need metal in z instead of elements.
     # fmt, default or 1 G3 format with blocks, 0 G2 format
 
@@ -11,6 +12,8 @@ def readsnapsgl(filename,block,endian=None,quiet=None,longid=None,met=None, fmt=
         endian = "="
     if fmt == None:
         fmt = 1
+    if longid == None:
+        longid = False
 
     if block=='HEAD':
         npf=open(filename,'r')
@@ -118,10 +121,10 @@ def read_block(npf, block,endian,quiet,longid,fmt):
                 return read_bdata(npf,3,np.dtype('float32'),endian)
 
             elif (block=='ID  ') & (loopnum==2):
-                if longid == None:
-                    return read_bdata(npf,1,np.dtype('uint32'),endian)
-                else:
+                if longid:
                     return read_bdata(npf,1,np.dtype('uint64'),endian)
+                else:
+                    return read_bdata(npf,1,np.dtype('uint32'),endian)
 
             elif (block=='MASS') & (loopnum==3):
                 return read_bdata(npf,1,np.dtype('float32'),endian)
@@ -141,10 +144,10 @@ def read_block(npf, block,endian,quiet,longid,fmt):
             return read_bdata(npf,3,np.dtype('float32'),endian)
 
         elif bname==block=='ID  ':
-            if longid == None:
-                return read_bdata(npf,1,np.dtype('uint32'),endian)
-            else:
+            if longid:
                 return read_bdata(npf,1,np.dtype('uint64'),endian)
+            else:
+                return read_bdata(npf,1,np.dtype('uint32'),endian)
 
         elif bname==block=='MASS':
             return read_bdata(npf,1,np.dtype('float32'),endian)
