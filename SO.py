@@ -70,6 +70,9 @@ else:
 bmpc=str(np.intp(np.round(binsize/1000.)))+"Mpc"
 tmpph =wrtpth+"tmpdata_"+exts+"_"+bmpc+"/"
 boxsize=head[5]
+if boxsize < 2000.:
+    print "In Mpc/h? try to change the unit into Kpc/h, if not try to change me at here!"
+    boxsize*=1000.
 bins=np.intp(np.ceil(boxsize/binsize))
 bins2=bins*bins
 bins3=bins2*bins
