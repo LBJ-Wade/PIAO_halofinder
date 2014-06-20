@@ -45,6 +45,7 @@ def writedata(wpath,rpath,exts,spnm,binsize,fnum,ii,lgid,edn=None):
         pos=readsnapsgl(rpath+"/"+spnm+exts+"."+str(ii),"POS ",endian=edn,quiet=1)
     if boxsize!=head[5]:
         #try to change pos into Kpc/h
+        pos.flags.writeable=True
         pos*=1000.
     xyz=np.uint32(pos/binsize)
     xyz=xyz[:,0]*bins2+xyz[:,1]*bins+xyz[:,2]
