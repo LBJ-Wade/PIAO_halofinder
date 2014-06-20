@@ -11,7 +11,19 @@ def readsnapsgl(filename,block,endian=None,quiet=None,longid=None,met=None, fmt=
     if endian == None:
         endian = "="
     if fmt == None:
-        fmt = 1
+        #try to get the format
+        npf=open(filename,'r')
+        bs1=unpack(endian+'i',npf.read(4))[0]
+        if bs1==256:
+            fmt = 0
+        elif bs1 == 8:
+            fmt =1
+        else:
+            print "Not knowing what is this value ", bs1, "still assuming format G3"
+            print "This may have incorrect results, better have a check on endian."
+            fmt=1
+        npf.close()
+
     if longid == None:
         longid = False
 
