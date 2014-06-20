@@ -31,6 +31,8 @@ def writedata(wpath,rpath,exts,spnm,binsize,fnum,ii,lgid,edn=None):
     for i in np.arange(npart.size):
         cumpart[i+1]=cumpart[i]+npart[i]
     boxsize=head[5]
+    if boxsize <2000.:
+        boxsize*=1000.
     bins=np.intp(np.ceil(boxsize/binsize))
     bins2=bins*bins
     bins3=bins2*bins
