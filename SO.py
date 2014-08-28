@@ -25,7 +25,7 @@ parser.add_argument('pfile', nargs='?', default="param.txt", \
     help='input parameter file. If nothing is given, we try with param.txt')
 parser.add_argument('-skip', type=int, default=0, dest='skip',\
     help='Skipping 1 (-skip 1) or 2 (-skip 2) part of the calculation')
-parser.add_argument('--version', action='version', version='PIAO, 1.0')
+parser.add_argument('--version', action='version', version='PIAO, 1.1')
 results = parser.parse_args()
 if rank==0:
     print "Tring to read parameter file : ", results.pfile
