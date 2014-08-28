@@ -74,7 +74,7 @@ def readsnapsgl(filename,block,endian=None,quiet=None,longid=None,met=None, fmt=
             if block=="MASS":      #We fill the mass with the mass tbl value if needed
                 idg0=(npart>0) & (masstbl>0)
                 if len(npart[idg0])>0:
-                    totmass=np.zeros(np.sum(npart,dtype=int64),dtype='float32')
+                    totmass=np.zeros(np.sum(npart,dtype=np.int64),dtype='float32')
                     bgc=0
                     subc=0
                     for k in np.arange(6):
