@@ -5,7 +5,7 @@ from time import time
 from ckdtree import cKDTree
 from analymesh import grouping, grouping_nl
 from writedata import writedata,readdata_smp
-from dprofile import profile
+#from dprofile import profile
 from mpi4py import MPI
 import os
 import argparse
