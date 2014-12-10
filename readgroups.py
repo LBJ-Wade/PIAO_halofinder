@@ -1,4 +1,3 @@
-"""model read_SOVIR"""
 import numpy as np
 from struct import unpack
 
