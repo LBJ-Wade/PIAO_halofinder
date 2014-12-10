@@ -81,7 +81,8 @@ if bins>=1000:
 
 HubbleParam,Omega0,OmegaLambda=head[8],head[6],head[7]
 redshift,scfa = head[3],head[2]
-pho_crit = 2.7753619773421899e-08  #Unit [10^10 M_sun/h] / [(kpc/h)^3] at redshift 0
+#pho_crit = 2.7753619773421899e-08  #Unit [10^10 M_sun/h] / [(kpc/h)^3] at redshift 0
+pho_crit = 2.7846602822750852e-08  #Unit [10^10 M_sun/h] / [(kpc/h)^3] at redshift 0
 phomean=pho_crit*Omega0
 pho_crit = pho_crit*(Omega0*(1+redshift)**3+OmegaLambda) 
 #pho_crit = phomean*(Omega0*(1+redshift)**3+OmegaLambda)   # Now it's mean 200!!
