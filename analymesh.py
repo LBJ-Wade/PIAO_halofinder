@@ -40,7 +40,7 @@ def grouping(outfiles,Numcut,boxsize,binsize,bufsize,scfa,SOpho,ii,meshids,meshp
     while True:     #Loop for peaks and SO groups
         didp=dens.argmax()
         ppos=meshpos[didp,:]
-        if (dens[didp]<phobase) | (Ncount>1000):
+        if (dens[didp]<phobase) & (Ncount>1000):
             break
 
         rrag=lmbs
@@ -179,7 +179,7 @@ def grouping_nl(outfiles,Numcut,boxsize,binsize,bufsize,scfa,SOpho,ii,meshids,me
     while True:     #Loop for peaks and SO groups
         didp=dens.argmax()
         ppos=meshpos[didp,:]
-        if (dens[didp]<phobase) | (Ncount>1000):
+        if (dens[didp]<phobase) & (Ncount>1000):
             break
 
         rrag=lmbs
