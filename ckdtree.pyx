@@ -2089,9 +2089,97 @@ cdef class cKDTree:
     #-Density-
     #---------
 
+    cdef int __qdens(cKDTree self, np.float64_t*r_dens,
+                     np.float64_t*mas, np.float64_t*x,
+                     np.intp_t n, np.intp_t k, np.float64_t eps, np.float64_t p,
+                     np.intp_t pre, np.float64_t rr,
+                     np.float64_t distance_upper_bound) except -1:
+        ##SPH Kernel for density calculation
+        
+        cdef np.intp_t i,c,km1
+        cdef np.float64_t*dd
+        cdef np.intp_t*ii
+        #cdef np.float64_t*xx
+        #if pre !=0:
+        cdef np.float64_t sumwk
+        
+        km1=k-1
+        dd=<np.float64_t*>stdlib.malloc(sizeof(np.float64_t)*k)
+        if dd == NULL:
+            raise MemoryError
+        ii=<np.intp_t*>stdlib.malloc(sizeof(np.intp_t)*k)
+        if ii == NULL:
+            raise MemoryError
+        #xx=<np.float64_t*>stdlib.malloc(sizeof(np.float64_t)*self.m)
+        #if xx == NULL:
+        #    raise MemoryError
+        for i in range(k):
+            dd[i]=infinity
+            ii[i]=0
+        
+        if pre == 0:  ##return particles' SPH density
+            if rr > 0:   # output only higher density than phoc
+                for c in range(n):
+                    ##x[c*self.m] give the c-th particles' position
+                    self.__query(&dd[0], &ii[0], &x[c*self.m],
+                                  k, eps, p, distance_upper_bound)
+                    if dd[km1]<rr:
+                        for i in range(km1):
+                            dd[i]=dd[i]/dd[km1]
+                            if dd[i]<0.5:
+                                dd[i]= (2.546479089470 + 15.278874536822 * (dd[i] - 1.0)
+                                        * dd[i] * dd[i])/dd[km1]**3*mas[ii[i]]
+                            else:
+                                dd[i]= (5.092958178941 * (1.0 - dd[i]) * (1.0 - dd[i])
+                                        * (1.0 - dd[i]))/dd[km1]**3*mas[ii[i]]
+                            r_dens[c]+=dd[i]
+            else:  #no rcut all density
+                for c in range(n):
+                    self.__query(&dd[0], &ii[0], &x[c*self.m],
+                                 k, eps, p, distance_upper_bound)
+                    for i in range(km1):
+                        dd[i]=dd[i]/dd[km1]
+                        if dd[i]<0.5:
+                            dd[i]= (2.546479089470 + 15.278874536822 * (dd[i] - 1.0)
+                                    * dd[i] * dd[i])/dd[km1]**3*mas[ii[i]]
+                        else:
+                            dd[i]= (5.092958178941 * (1.0 - dd[i]) * (1.0 - dd[i])
+                                    * (1.0 - dd[i]))/dd[km1]**3*mas[ii[i]]
+                        r_dens[c]+=dd[i]
+
+                            
+        else: ##Preserve=1, smooth the input mass to ckdtree points, and out put the ckdtree points' value
+            for c in range(n):
+                self.__query(&dd[0], &ii[0], &x[c*self.m],
+                             k, eps, p, distance_upper_bound)
+                sumwk=0.
+                for i in range(km1):
+                    dd[i]=dd[i]/dd[km1]
+                    if dd[i]<0.5:
+                        sumwk+= (2.546479089470 + 15.278874536822 *
+                                (dd[i] - 1.0) * dd[i] * dd[i])/dd[km1]**3
+                    else:
+                        sumwk+= (5.092958178941 * (1.0 - dd[i]) *
+                                (1.0 - dd[i]) * (1.0 - dd[i]))/dd[km1]**3
+                for i in range(km1):
+                    if dd[i]<0.5:
+                        dd[i]= (2.546479089470 + 15.278874536822 *
+                                (dd[i] - 1.0) * dd[i] * dd[i])/dd[km1]**3
+                    else:
+                        dd[i]= (5.092958178941 * (1.0 - dd[i]) *
+                                (1.0 - dd[i]) * (1.0 - dd[i]))/dd[km1]**3
+                    r_dens[ii[i]]+=dd[i]*mas[c]/sumwk
+                    
+        if dd != NULL:
+            stdlib.free(dd)
+        if ii != NULL:
+            stdlib.free(ii)
+
+        return 0
+
     @cython.boundscheck(False)
-    def qdens(cKDTree self, object x, object mass, np.intp_t k=1,
-              np.float64_t phoc=-1., np.float64_t eps=0, np.float64_t p=2,
+    def qdens(cKDTree self, object x, object mass, np.intp_t k=1, np.float64_t phoc=-1., 
+              np.float64_t eps=0, np.float64_t p=2, np.intp_t preserve=0, 
               np.float64_t distance_upper_bound=infinity):
         """qdens(self, x, k=1, eps=0, p=2, distance_upper_bound=np.inf)
         
@@ -2101,9 +2189,11 @@ cdef class cKDTree:
         Parameters
         ----------
         x : array_like, last dimension self.m
-            An array of points to query.
-        mass : array_like, 1 dimension, length self.n
-            An array of mass for each point
+            An array of points to query. Put None (or x=None), if you want to use the self.data (i.e. Tree data).
+        mass : array_like, 1 dimension.
+            length = self.n (same length as Tree data) if preserve = 0.
+            length = input.n (same length as input data x) if preserve = 1.
+            It also can be a constant float value, means the (input/Tree) particels have the same mass.
         k : integer
             The number of nearest neighbors to return.
         phoc : density cut for out put. Default, -1.0, which is not included.
@@ -2118,6 +2208,12 @@ cdef class cKDTree:
             1 is the sum-of-absolute-values "Manhattan" distance
             2 is the usual Euclidean distance(default)
             infinity is the maximum-coordinate-difference distance
+        preserve : int. 0 default, this will return normal SPH densities from Tree particles.
+            if input particle data are not the same as Tree particles, it returns the SPH densities at
+            the given input particle data positions.
+            1, otherwise, this progrm will assign the input particles mass to nearby Tree particles,
+            and preserve the input particles's mass. Thus, it will require the mass has the same
+            length as the input particles, and return the "density" as the Tree particles' length!!
         distance_upper_bound : nonnegative float
             Return only neighbors within this distance.  This is used to prune
             tree searches, so if you are doing a series of nearest-neighbor
@@ -2127,118 +2223,71 @@ cdef class cKDTree:
         Returns
         -------
         d : array of floats
-            The density of each point. 
-            The same shape as mass.
-
+            if preserve == 0:
+              The density of each point. 
+              The same shape as point number.
+            else:
+              smooth the input x' mass over the points, which are used for building the ckdtree.
+	      The return array have the same longth as the points, not x!
+              This will conserve the total mass of x...
         """
-        cdef np.ndarray[np.intp_t, ndim=1] ii
-        cdef np.ndarray[np.float64_t, ndim=1] dd
-        cdef np.ndarray[np.float64_t, ndim=2] xx
+
         cdef np.ndarray[np.float64_t, ndim=1] dens
-        cdef np.intp_t c, n, i, km1
+        cdef np.ndarray[np.float64_t, mode="c", ndim=2] xx
+        cdef np.ndarray[np.float64_t, ndim=1] mm
+        cdef np.intp_t  n
         cdef np.float64_t rcut
-        km1=k-1
-        rcut=0.
-        x = np.asarray(x).astype(np.float64)
-        mass=np.asarray(mass).astype(np.float64)
-        if mass.size==1:
-            sm = True
-        else:
-            sm = False
-        if np.shape(x)[-1] != self.m:
-            raise ValueError("x must consist of vectors of length %d but has"
-                             "shape %s" % (int(self.m), np.shape(x)))
+        rcut=-1.
+
         if p < 1:
             raise ValueError("Only p-norms with 1<=p<=infinity permitted")
-        if len(x.shape)==1:
-            single = True
-            x = x[np.newaxis,:]
+
+        if x is not None:
+            x = np.asarray(x).astype(np.float64)
+            if len(x.shape)==1:
+                x = x[np.newaxis,:]
+            
+            if np.shape(x)[-1] != self.m:
+                raise ValueError("x must consist of vectors of length %d but has"
+                                 "shape %s" % (int(self.m), np.shape(x)))
+
+            retshape = np.shape(x)[:-1]
+            n = <np.intp_t> np.prod(retshape)
+            xx = np.reshape(x,(n,self.m))
+            xx = np.ascontiguousarray(xx,dtype=np.float64)
         else:
-            single = False
-        retshape = np.shape(x)[:-1]
-        n = <np.intp_t> np.prod(retshape)
-        xx = np.reshape(x,(n,self.m))
-        xx = np.ascontiguousarray(xx,dtype=np.float64)
-        dd = np.empty((k),dtype=np.float64)
-        dd.fill(infinity)
-        dens=np.empty(n,dtype=np.float64)
+            n  = self.n
+            xx = np.ascontiguousarray(self.data,dtype=np.float64)
+            
+        mass=np.asarray(mass).astype(np.float64)
+        if preserve==1:
+            dens=np.empty(self.n,dtype=np.float64) #Must have the same length as Tree data
+            if np.size(mass) == 1:
+                mm = np.empty(n,dtype=np.float64)  #Must have the same length as input data
+                mm.fill(1.0)
+            elif np.size(mass) != n:
+                raise ValueError("Require the mass has the same longth as input particles.")
+            else:
+                mm = np.ascontiguousarray(mass,dtype=np.float64)
+        else:
+            dens=np.empty(n,dtype=np.float64)           #Must have the same length as input data
+            if np.size(mass) == 1:
+                mm = np.empty(self.n,dtype=np.float64)  #Must have the same length as Tree data
+                mm.fill(1.0)
+            elif np.size(mass) != self.n:
+                raise ValueError("Require the mass has the same longth as cKDTree particles.")
+            else:
+                mm = np.ascontiguousarray(mass,dtype=np.float64)
         dens.fill(0)
-        ii = np.empty((k),dtype=np.intp)
-        ii.fill(self.n)
 
-        if phoc > 0:
-            if sm:
-                rcut=(mass*k*3.0/4.0/np.pi/phoc)**(1.0/3.0)
-            else:
-                rcut=(np.max(mass)*k*3.0/4.0/np.pi/phoc)**(1.0/3.0)
+        if (phoc > 0):
+            rcut=(np.max(mm)*k*3.0/4.0/np.pi/phoc)**(1.0/3.0)
+            
+        self.__qdens(&dens[0], &mm[0], &xx[0,0],
+                     n, k, eps, p, preserve, rcut, distance_upper_bound)
 
-        if sm:
-            if phoc > 0:   # output only higher density than phoc
-                for c in range(n):
-                    self.__query(&dd[0], &ii[0], &xx[c, 0],
-                                 k, eps, p, distance_upper_bound)
-                    if dd[km1]<rcut:
-                        for i in range(k):
-                            dd[i]=dd[i]/dd[km1]
-                            if dd[i]<0.5:
-                                dd[i]= (2.546479089470 + 15.278874536822 *
-                                        (dd[i] - 1.0) * dd[i] * dd[i])/dd[km1]**3
-                            else:
-                                dd[i]= (5.092958178941 * (1.0 - dd[i]) *
-                                        (1.0 - dd[i]) * (1.0 - dd[i]))/dd[km1]**3
-                            dens[c]+=dd[i]
-            else:    #output all densities
-                for c in range(n):
-                    self.__query(&dd[0], &ii[0], &xx[c, 0],
-                                 k, eps, p, distance_upper_bound)
-                    for i in range(k):
-                        dd[i]=dd[i]/dd[km1]
-                        if dd[i]<0.5:
-                            dd[i]= (2.546479089470 + 15.278874536822 *
-                                    (dd[i] - 1.0) * dd[i] * dd[i])/dd[km1]**3
-                        else:
-                            dd[i]= (5.092958178941 * (1.0 - dd[i]) *
-                                    (1.0 - dd[i]) * (1.0 - dd[i]))/dd[km1]**3
-                        dens[c]+=dd[i]
-        else:
-            if phoc<=0:  #all density
-                for c in range(n):
-                    self.__query(&dd[0], &ii[0], &xx[c, 0],
-                                 k, eps, p, distance_upper_bound)
-                    for i in range(k):
-                        dd[i]=dd[i]/dd[km1]
-                        if dd[i]<0.5:
-                            dd[i]= (2.546479089470 + 15.278874536822 * (dd[i] - 1.0)
-                                    * dd[i] * dd[i])/dd[km1]**3*mass[ii[i]]
-                        else:
-                            dd[i]= (5.092958178941 * (1.0 - dd[i]) * (1.0 - dd[i])
-                                    * (1.0 - dd[i]))/dd[km1]**3*mass[ii[i]]
-                        dens[c]+=dd[i]
-            else:   # density cut
-                for c in range(n):
-                    self.__query(&dd[0], &ii[0], &xx[c, 0],
-                                 k, eps, p, distance_upper_bound)
-                    if dd[km1]<rcut:
-                        for i in range(k):
-                            dd[i]=dd[i]/dd[km1]
-                            if dd[i]<0.5:
-                                dd[i]= (2.546479089470 + 15.278874536822 * (dd[i] - 1.0)
-                                        * dd[i] * dd[i])/dd[km1]**3*mass[ii[i]]
-                            else:
-                                dd[i]= (5.092958178941 * (1.0 - dd[i]) * (1.0 - dd[i])
-                                        * (1.0 - dd[i]))/dd[km1]**3*mass[ii[i]]
-                            dens[c]+=dd[i]
+        return dens
 
-        if sm:
-            if single:
-                return dens[0]*mass
-            else:
-                return dens*mass
-        else:
-            if single:
-                return dens[0]
-            else:
-                return dens
 
     # ----------------
     # query_neighbors
@@ -2321,7 +2370,7 @@ cdef class cKDTree:
                          np.float64_t p=2., np.float64_t eps=0):
         """query_ball_point(self, x, r, p, eps)
         
-        Return the number of neighbors within distance r of point(s) x.
+        Simply return the number of neighbors within distance r of point(s) x.
 
         Parameters
         ----------
