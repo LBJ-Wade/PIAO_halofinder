@@ -69,7 +69,7 @@ def readsnapsgl(filename,block,endian=None,quiet=None,longid=None,met=None, fmt=
                     return totmass
 
         subdata=read_block(npf,block,endian,quiet,longid,fmt)
-        if subdata != None:
+        if subdata is not None:
             npf.close()
             if block=="MASS":      #We fill the mass with the mass tbl value if needed
                 idg0=(npart>0) & (masstbl>0)
