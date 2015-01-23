@@ -2,7 +2,7 @@ import numpy as np
 from time import time
 from struct import *
 
-def grouping(outfiles,Numcut,boxsize,binsize,bufsize,scfa,SOpho,ii,meshids,meshpos,meshmas,dens, phobase):
+def grouping(outfiles,Numcut,boxsize,binsize,bufsize,scfa,SOpho,ii,meshids,meshpos,meshmas,dens):
 
     bins=np.intp(np.ceil(boxsize/binsize))
     bins2=bins*bins
@@ -40,7 +40,7 @@ def grouping(outfiles,Numcut,boxsize,binsize,bufsize,scfa,SOpho,ii,meshids,meshp
     while True:     #Loop for peaks and SO groups
         didp=dens.argmax()
         ppos=meshpos[didp,:]
-        if (dens[didp]<phobase) & (Ncount>1000):
+        if (dens[didp]<SOpho) & (Ncount>100):
             break
 
         rrag=lmbs
@@ -85,7 +85,7 @@ def grouping(outfiles,Numcut,boxsize,binsize,bufsize,scfa,SOpho,ii,meshids,meshp
             rpxyz=np.int32(np.floor(ppos/binsize))
             if (rpxyz[0]==nxyz[0]) & (rpxyz[1]==nxyz[1]) &(rpxyz[2]==nxyz[2]):   #if the new postion out of base box, we will drop it 
                 mtdenpos=np.argmax(np.abs(dens[rslpart]))
-                if dens[didp]<np.abs(dens[rslpart][mtdenpos]):  #other higher density peak in this group
+                if (dens[didp]<np.abs(dens[rslpart][mtdenpos])) & (len(SOpotPos)>0):  #other higher density peak in this group
                     distog=np.sqrt(np.sum((np.array(SOpotPos)-ppos)**2,axis=1,dtype=np.float64))  #check for already identified groups
                     mtid=np.where(distog<gradius)[0]
                     if (len(mtid)>0) & (meshids[rslpart][mtdenpos] in SOPids):  #Other identified groups lie in this group. Take them as its substructures and remove by M*-1
@@ -140,7 +140,7 @@ def grouping(outfiles,Numcut,boxsize,binsize,bufsize,scfa,SOpho,ii,meshids,meshp
 
     return SOTotNgroups #,SOTotNids,SOGroupLen,SOGroupOffset[:SOTotNgroups],SOGroupMass,SOR500,SOpotPos,SOmcPos,SOPids,SOGroupIDs
 
-def grouping_nl(outfiles,Numcut,boxsize,binsize,bufsize,scfa,SOpho,ii,meshids,meshpos,meshmas,dens,phobase):
+def grouping_nl(outfiles,Numcut,boxsize,binsize,bufsize,scfa,SOpho,ii,meshids,meshpos,meshmas,dens):
 
     bins=np.intp(np.ceil(boxsize/binsize))
     bins2=bins*bins
@@ -179,7 +179,7 @@ def grouping_nl(outfiles,Numcut,boxsize,binsize,bufsize,scfa,SOpho,ii,meshids,me
     while True:     #Loop for peaks and SO groups
         didp=dens.argmax()
         ppos=meshpos[didp,:]
-        if (dens[didp]<phobase) & (Ncount>1000):
+        if (dens[didp]<SOpho) & (Ncount>100):
             break
 
         rrag=lmbs
