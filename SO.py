@@ -169,13 +169,12 @@ if results.skip != 2:  #SKIP step 2
             #print "denstime",time()-st
 
             for ot in range(len(phot)):
-                phobase=phomean*SOpho[ot]/pho_crit*Omega0
                 if overlap:
                     outph =wrtpth+"Groups_"+phot[ot]+"_"+exts+"_"+bmpc+"_"+str(nbs)+"/"
                     outfn ='SO'
                     outfiles=outph+outfn
                     ret_grop=grouping(outfiles,Numcut,boxsize,binsize,
-                             bufsize,scfa,SOpho[ot],ii,meshids,meshpos,meshmas,dens,phobase)
+                             bufsize,scfa,SOpho[ot],ii,meshids,meshpos,meshmas,dens)
                     #if phot[ot]=='VIR':
                     #        profile(ii,boxsize,binsize,bufsize,longid,outph,scfa,ret_mesh,ret_grop)
                 #else:
@@ -183,7 +182,7 @@ if results.skip != 2:  #SKIP step 2
                     outfn ='SO'
                     outfiles=outph+outfn
                     grouping_nl(outfiles,Numcut,boxsize,binsize,
-                             bufsize,scfa,SOpho[ot],ii,meshids,meshpos,meshmas,dens,phobase)
+                             bufsize,scfa,SOpho[ot],ii,meshids,meshpos,meshmas,dens)
             comm.send(rank,dest=0,tag=1)
             Final=comm.recv(source=0,tag=2)
 
