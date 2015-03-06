@@ -70,14 +70,16 @@ else:
 bmpc=str(np.intp(np.round(binsize/1000.)))+"Mpc"
 tmpph =wrtpth+"tmpdata_"+exts+"_"+bmpc+"/"
 boxsize=head[5]
-if boxsize < 2000.:
-    print "In Mpc/h? try to change the unit into Kpc/h, if not try to change me at here!"
-    boxsize*=1000.
+if rank == 0:
+    if boxsize < 2000.:
+        print "Position unit in Mpc/h? I change it into Kpc/h here. If not, try to change me at here!"
+        boxsize*=1000.
 bins=np.intp(np.ceil(boxsize/binsize))
 bins2=bins*bins
 bins3=bins2*bins
-if bins>=1000:
-    print "We do not recommend to use such large number sub boxes : ", bins3
+if rank == 0:
+    if bins>=1000:
+        print "We do not recommend to use such large number sub boxes : ", bins3
 
 HubbleParam,Omega0,OmegaLambda=head[8],head[6],head[7]
 redshift,scfa = head[3],head[2]
@@ -133,14 +135,22 @@ if rank==0:
 if results.skip != 2:  #SKIP step 2
     if rank ==0:
         for ot in phot:
-            if overlap:
+            if overlap == 1:
                 outph =wrtpth+"Groups_"+ot+"_"+exts+"_"+bmpc+"_"+str(nbs)+"/"
-            else:
+                if not os.path.isdir(outph):
+                    os.mkdir(outph)
+            elif overlap == 0:
                 outph =wrtpth+"Groups_"+ot+"_"+exts+"_"+bmpc+"_"+str(nbs)+"_nl/"
-            if not os.path.isdir(outph):
+                if not os.path.isdir(outph):
+                    os.mkdir(outph)
+            elif overlap == 2: ## need Both os.path.isdir(outph):
                 #os.system('rm -rf %s' %outph)
-                os.mkdir(outph)
-                os.mkdir(wrtpth+"Groups_"+ot+"_"+exts+"_"+bmpc+"_"+str(nbs)+"_nl/")
+                outph =wrtpth+"Groups_"+ot+"_"+exts+"_"+bmpc+"_"+str(nbs)+"/"
+                if not os.path.isdir(outph):
+                    os.mkdir(outph)
+                outph =wrtpth+"Groups_"+ot+"_"+exts+"_"+bmpc+"_"+str(nbs)+"_nl/"
+                if not os.path.isdir(outph):
+                    os.mkdir(outph)
 
         ii=0
         while (ii<bins3):
@@ -169,19 +179,22 @@ if results.skip != 2:  #SKIP step 2
             #print "denstime",time()-st
 
             for ot in range(len(phot)):
-                if overlap:
-                    outph =wrtpth+"Groups_"+phot[ot]+"_"+exts+"_"+bmpc+"_"+str(nbs)+"/"
-                    outfn ='SO'
-                    outfiles=outph+outfn
+                if overlap == 1:
+                    #outph =wrtpth+"Groups_"+phot[ot]+"_"+exts+"_"+bmpc+"_"+str(nbs)+"/"
+                    outfiles=outph+"SO"
                     ret_grop=grouping(outfiles,Numcut,boxsize,binsize,
                              bufsize,scfa,SOpho[ot],ii,meshids,meshpos,meshmas,dens)
-                    #if phot[ot]=='VIR':
-                    #        profile(ii,boxsize,binsize,bufsize,longid,outph,scfa,ret_mesh,ret_grop)
-                #else:
-                    outph =wrtpth+"Groups_"+phot[ot]+"_"+exts+"_"+bmpc+"_"+str(nbs)+"_nl/"
-                    outfn ='SO'
-                    outfiles=outph+outfn
-                    grouping_nl(outfiles,Numcut,boxsize,binsize,
+                elif overlap == 0:
+                    #outph =wrtpth+"Groups_"+phot[ot]+"_"+exts+"_"+bmpc+"_"+str(nbs)+"_nl/SO"
+                    outfiles=outph+"SO"
+                    ret_grop=grouping_nl(outfiles,Numcut,boxsize,binsize,
+                             bufsize,scfa,SOpho[ot],ii,meshids,meshpos,meshmas,dens)
+                elif overlap == 2:
+                    outfiles=wrtpth+"Groups_"+phot[ot]+"_"+exts+"_"+bmpc+"_"+str(nbs)+"/SO"
+                    ret_grop=grouping(outfiles,Numcut,boxsize,binsize,
+                             bufsize,scfa,SOpho[ot],ii,meshids,meshpos,meshmas,dens)
+                    outfiles=wrtpth+"Groups_"+phot[ot]+"_"+exts+"_"+bmpc+"_"+str(nbs)+"_nl/SO"
+                    ret_grop=grouping_nl(outfiles,Numcut,boxsize,binsize,
                              bufsize,scfa,SOpho[ot],ii,meshids,meshpos,meshmas,dens)
             comm.send(rank,dest=0,tag=1)
             Final=comm.recv(source=0,tag=2)
