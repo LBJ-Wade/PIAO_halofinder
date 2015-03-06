@@ -27,3 +27,5 @@ The ckdtree.pyx file is shamelessly stolen from
 https://github.com/scipy/scipy/blob/master/scipy/spatial/ckdtree.pyx.
 Thanks to Patrick Varilly.
 I only add SPH density calculation. Call Tree.qdens? for more information
+
+Use the readgroups.py file to read the output of PIAO
