@@ -2152,23 +2152,31 @@ cdef class cKDTree:
             for c in range(n):
                 self.__query(&dd[0], &ii[0], &x[c*self.m],
                              k, eps, p, distance_upper_bound)
-                sumwk=0.
-                for i in range(km1):
-                    dd[i]=dd[i]/dd[km1]
-                    if dd[i]<0.5:
-                        sumwk+= (2.546479089470 + 15.278874536822 *
-                                (dd[i] - 1.0) * dd[i] * dd[i])/dd[km1]**3
-                    else:
-                        sumwk+= (5.092958178941 * (1.0 - dd[i]) *
-                                (1.0 - dd[i]) * (1.0 - dd[i]))/dd[km1]**3
-                for i in range(km1):
-                    if dd[i]<0.5:
-                        dd[i]= (2.546479089470 + 15.278874536822 *
-                                (dd[i] - 1.0) * dd[i] * dd[i])/dd[km1]**3
-                    else:
-                        dd[i]= (5.092958178941 * (1.0 - dd[i]) *
-                                (1.0 - dd[i]) * (1.0 - dd[i]))/dd[km1]**3
-                    r_dens[ii[i]]+=dd[i]*mas[c]/sumwk
+                if k == 1:
+                    r_dens[ii[0]]+=mas[c]
+                else:
+                    sumwk=0.
+                    if dd[0] != dd[km1]: 
+                        for i in range(km1):
+                            dd[i]=dd[i]/dd[km1]
+                            if dd[i]<0.5:
+                                sumwk+= (2.546479089470 + 15.278874536822 *
+                                    (dd[i] - 1.0) * dd[i] * dd[i])/dd[km1]**3
+                            else:
+                                sumwk+= (5.092958178941 * (1.0 - dd[i]) *
+                                    (1.0 - dd[i]) * (1.0 - dd[i]))/dd[km1]**3
+                        for i in range(km1):
+                            if dd[i]<0.5:
+                                dd[i]= (2.546479089470 + 15.278874536822 *
+                                    (dd[i] - 1.0) * dd[i] * dd[i])/dd[km1]**3
+                            else:
+                                dd[i]= (5.092958178941 * (1.0 - dd[i]) *
+                                    (1.0 - dd[i]) * (1.0 - dd[i]))/dd[km1]**3
+                            r_dens[ii[i]]+=dd[i]*mas[c]/sumwk
+                    else: ##same distances, equal assignment between k neighbours
+                        for i in range(k):
+                            r_dens[ii[i]]+=mas[c]/k
+                    
                     
         if dd != NULL:
             stdlib.free(dd)
