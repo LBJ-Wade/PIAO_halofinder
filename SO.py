@@ -90,7 +90,7 @@ pho_crit = pho_crit*(Omega0*(1+redshift)**3+OmegaLambda)
 #pho_crit = phomean*(Omega0*(1+redshift)**3+OmegaLambda)   # Now it's mean 200!!
 #change to critical density of redshift z
 omegaz=Omega0*(1+redshift)**3/(Omega0*(1+redshift)**3+OmegaLambda)
-phovir=(18.*np.pi**2+82.*(omegaz-1)-39.*(omegaz-1)**2)*pho_crit
+phovir=(18.*np.pi**2+82.*(omegaz-1)-39.*(omegaz-1)**2)*pho_crit #ref: Bryan & Norman 98
 SOpho=np.zeros((0),dtype=np.float64)
 for ot in phot:
     if ot == "VIR":

@@ -8,7 +8,7 @@ Numcut=250.                           	;#Min particle number within each SO grou
 nbs=64                               	;#SPH neighbours
 overlap=1                         	;#put 0, 1, 2 here. 0: no overlapping, 1: overlapping, 2: both
 longid =False 		                ;#If particle id requires long long, or not
-phot=[500]		  		;#Add here all the interested overdensities
+phot=[500,VIR]		  		;#Add here all the interested overdensities; also VIR from Brian&Norman 98 definition
 
 #******* Snapshot input parameter*************#
 [sip]
